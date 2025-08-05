@@ -225,3 +225,44 @@ func UpdateProduct(c *fiber.Ctx) {
 		})
 	}
 }
+
+// GetProductsByCategory returns all products in a given category
+func GetProductsByCategory(c *fiber.Ctx) {
+	category := c.Params("category")
+	result := model.Products{}
+
+	// Query the database
+	rows, err := database.DB.Query("SELECT name, description, category, amount FROM products WHERE category = $1", category)
+	if err != nil {
+		c.Status(500).JSON(&fiber.Map{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		product := model.Product{}
+		if err := rows.Scan(&product.Name, &product.Description, &product.Category, &product.Amount); err != nil {
+			c.Status(500).JSON(&fiber.Map{
+				"success": false,
+				"message": err.Error(),
+			})
+			return
+		}
+		result.Products = append(result.Products, product)
+	}
+
+	// Return the result
+	if err := c.JSON(&fiber.Map{
+		"success": true,
+		"message": "Products by category fetched successfully",
+		"product": result,
+	}); err != nil {
+		c.Status(500).JSON(&fiber.Map{
+			"success": false,
+			"message": "Failed to return category products",
+		})
+	}
+}
